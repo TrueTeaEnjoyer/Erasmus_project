@@ -1,3 +1,4 @@
+#cs
 import requests
 
 bot_token = '6972789464:AAFZfAKYnLyjcpaZIGJFQ0yOvY3zLlA1K00'
