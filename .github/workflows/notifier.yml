@@ -17,3 +17,4 @@ jobs:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
         message: The ${{ github.event_name}} event triggered this message.
+                  https://github.com/TrueTeaEnjoyer/Erasmus_project
