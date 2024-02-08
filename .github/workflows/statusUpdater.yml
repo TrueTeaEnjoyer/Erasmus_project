@@ -14,7 +14,7 @@ jobs:
     - name: send custom message
       uses: appleboy/telegram-action@master
       with:
-        to: ${{ secrets.TELEGRAM_TO }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
+        to: ${{ secrets.TELEGRAM_TO2 }}
+        token: ${{ secrets.TELEGRAM_TOKEN2 }}
         message: The ${{ github.event_name}} event triggered this message.
                   https://github.com/TrueTeaEnjoyer/Erasmus_project
