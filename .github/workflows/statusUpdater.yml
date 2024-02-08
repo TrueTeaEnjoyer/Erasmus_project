@@ -1,4 +1,4 @@
-name: Notifier
+name: Updater
 
 on:
   push:
