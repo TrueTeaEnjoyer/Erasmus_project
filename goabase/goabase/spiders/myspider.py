@@ -27,11 +27,12 @@ class MySpider(scrapy.Spider):
 
     def parse_party(self, response):
         # Extracting the title from the party page
-        title = response.css('span.block.strong.over-hidden::text').get()
+        title = response.css('h2::text').get()
+        date = response.xpath('//*[@id="inner-content"]/div[1]/div[1]/div[1]/div[2]/a[1]/text()').get()
 
         # Yielding the result with 'Link' and 'Title' and 'Date'
         yield {
             'Link': response.url,
             'Title': title,
-             #'Date': date,
+            'Date': date,
         }
