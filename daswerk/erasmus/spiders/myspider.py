@@ -2,8 +2,8 @@ import scrapy
 
 
 class MySpider(scrapy.Spider):
-    name = 'daswerkSpider'
-    start_urls = ['https://www.daswerk.org/programm/']
+    name = 'myspider'
+    start_urls = ['https://www.daswerk.org/']
 
     custom_settings = {
         'FEEDS': {
@@ -28,9 +28,11 @@ class MySpider(scrapy.Spider):
     def parse_event(self, response):
         # Extracting the title from the party page
         title = response.css('p.main--header-title::text').get()
+        date = response.css('li::text').get()
 
         # Yielding the result with 'Link' and 'Title'
         yield {
             'Link': response.url,
             'Title': title,
+            'Date': date,
         }
