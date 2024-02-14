@@ -1,6 +1,9 @@
 import scrapy
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
 
-class MySpider(scrapy.Spider):
+
+class MySpider(CrawlSpider):
     name = 'myspider'
     start_urls = ['https://www.flucc.at/']
 
@@ -14,22 +17,21 @@ class MySpider(scrapy.Spider):
         },
     }
 
+    rules = [
+        Rule(LinkExtractor(allow='events'), callback='parse_item')
+    ]
+
     # Method responsible for processing responses
-    def parse(self, response):
+    def parse_item(self, response):
         # Log the visited URL and the status code
         self.log(f"Visited {response.url} with status code {response.status}")
 
-        # Extract interesting data using CSS selectors
-        links = response.css('a[href^="/events/"]::attr(href)').getall()
-        titles = response.css('div.title-dimension.h-center h4::text').getall()
+        date = response.css('p.date.uppercase::text').get().strip()
+        time = response.css('p.time::text').get().strip()
+        event = response.css('h2::text').get().strip()
 
-        # Specify a more accurate CSS selector for dates
-        dates = response.css('div.day-title h4::text').getall()
-
-        # Iterate over the data and yield JSON objects
-        for link, title, date in zip(links, titles, dates):
-            yield {
-                'Link': 'https://www.flucc.at' + link,
-                'Title': title.strip(),
-                'Date': date.strip(),
-            }
+        yield {
+            'Link': response.url,
+            'Event': event,
+            'Date': date + ' ' + time
+        }
