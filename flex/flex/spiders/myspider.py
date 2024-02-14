@@ -1,5 +1,6 @@
 import scrapy
 
+
 class MySpider(scrapy.Spider):
     name = 'myspider'
     start_urls = ['https://flex.at/']
