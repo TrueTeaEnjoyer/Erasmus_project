@@ -2,7 +2,7 @@ import scrapy
 
 class MySpider(scrapy.Spider):
     name = 'myspider'
-    start_urls = ['https://goodnight.at/events', 'https://goodnight.at/events?view=events&start_offset=1']
+    start_urls = ['https://goodnight.at/events']
 
     custom_settings = {
         'FEEDS': {
@@ -14,33 +14,43 @@ class MySpider(scrapy.Spider):
     }
 
     def parse(self, response):
-        # Select all 'div.event-item-box' elements on the page
-        event_boxes = response.css('div.event-item-box')
+        g=response.xpath('//*[@id="top-inner"]')
+        events = g.css('div.event-items-col')
+        current_event_index = 0
+        stopping_index=1
+        for x in events:
+            # Extract the time for each event
+            time = ''.join(x.css('div.date::text').get()).strip()
+            j=response.xpath('//*[@id="main"]')
+            event = j.css('div.event-items-col')
+            event = event[current_event_index:stopping_index]
+            for y in event:  # This line should be indented
+                # Select all 'div.event-item-box' elements on the page
+                event_boxes = y.css('div.event-item-box')
 
-        for box in event_boxes:
-            # Extract the date and remove extra spaces
-            date = ' '.join(box.css('div.date::text').getall()).strip()
+                for box in event_boxes:
 
-            # Check if the date falls among values to be skipped, if so, skip to the next record
-            if date in ["4.12.23", "5.12.23", "6.12.23", "7.12.23", "8.12.23", "9.12.23", "10.12.23", "11.12.23", "12.12.23", "13.12.23"]:
-                continue
+                    # Extract the date and remove extra spaces
+                    date = ' '.join(box.css('div.date::text').getall()).strip()
 
-            # Extract the title ('div.title-small'), if not present, consider the text from 'a.link_new'
-            title = ' '.join(box.css('div.title-small::text').getall()).strip()
-            if not title:
-                title = ' '.join(box.css('a.link_new::text').getall()).strip()
+                    title = ' '.join(box.css('div.title-small::text').getall()).strip()
+                    if not title:
+                        title = ' '.join(box.css('a.link_new::text').getall()).strip()
 
-            # Extract the link ('a.link_new' href attribute)
-            link = box.css('a.link_new::attr(href)').get()
+                    link = box.css('a.link_new::attr(href)').getall()
 
-            # Single space between each field value
-            date = ' '.join(date.split())
-            title = ' '.join(title.split())
+                    # Single space between each field value
+                    date = ' '.join(date.split())
+                    title = ' '.join(title.split())
+                    time = ' '.join(time.split())
+                    date2 = date + ' ' +time
 
-            # Return the cleaned data in a JSON record
-            yield {
-                'Link': link if link else "This doesn't has link",
-                'Title': title,
-                'Date': date,
+                    yield {
+                        'Link': link if link else "This doesn't have a link",
+                        'Title': title,
+                        'Date': date2,
+                    }
 
-            }
+            current_event_index += 1
+            stopping_index += 1
+
