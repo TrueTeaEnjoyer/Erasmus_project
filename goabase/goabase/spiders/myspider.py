@@ -1,6 +1,5 @@
 import scrapy
 
-
 class MySpider(scrapy.Spider):
     name = 'myspider'
     start_urls = ['https://www.goabase.net/party/?saAtt[geoloc]=wien&saAtt[radius]=100&saAtt[geolat]=48.2&saAtt[geolon]=16.3']
@@ -27,12 +26,11 @@ class MySpider(scrapy.Spider):
 
     def parse_party(self, response):
         # Extracting the title from the party page
-        title = response.css('h2::text').get()
-        date = response.xpath('//*[@id="inner-content"]/div[1]/div[1]/div[1]/div[2]/a[1]/text()').get()
-
-        # Yielding the result with 'Link' and 'Title' and 'Date'
+        title = response.css('span.block.strong.over-hidden::text').get()
+        date_time = response.xpath('//*[@id="inner-content"]/div[1]/div[1]/div[1]/div[2]/a[1]/text()').get()
+        # Yielding the result with 'Link', 'Title', and 'Date'   fx-grw1 m-b2 m-l10 fs108
         yield {
             'Link': response.url,
             'Title': title,
-            'Date': date,
+            'Date': date_time,
         }
