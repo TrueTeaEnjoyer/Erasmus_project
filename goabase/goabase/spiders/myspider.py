@@ -2,7 +2,7 @@ import scrapy
 
 class MySpider(scrapy.Spider):
     name = 'myspider'
-    start_urls = ['https://www.goabase.net/party/?saAtt[geoloc]=wien&saAtt[radius]=100&saAtt[geolat]=48.2&saAtt[geolon]=16.3']
+    start_urls = ['https://www.goabase.net/party/?saAtt%5Bcountry%5D=Austria&saAtt%5Bradius%5D=100&nPos=20']
 
     custom_settings = {
         'FEEDS': {
