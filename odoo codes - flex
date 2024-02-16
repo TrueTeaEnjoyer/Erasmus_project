@@ -1,0 +1,84 @@
+import json
+import xmlrpc.client
+import ssl
+from datetime import datetime
+import calendar
+
+url = "http://148.251.132.24:8069"
+db = "student"
+username = 'student'
+password = "student"
+
+# Use SSL/TLS properly
+context = ssl.create_default_context()
+context.check_hostname = False
+context.verify_mode = ssl.CERT_NONE
+
+common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(url), verbose=False, use_datetime=True, context=context)
+common.version()
+uid = common.authenticate(db, username, password, {})
+models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(url), verbose=False, use_datetime=True, context=context)
+
+# Load event data from JSON file
+with open('events.json') as f:
+    events = json.load(f)
+
+# Mapping of German month abbreviations to English
+month_abbreviations = {
+    "Jan": "Jan",
+    "Feb": "Feb",
+    "Mrz": "Mar",
+    "Apr": "Apr",
+    "Mai": "May",
+    "Jun": "Jun",
+    "Jul": "Jul",
+    "Aug": "Aug",
+    "Sep": "Sep",
+    "Okt": "Oct",
+    "Nov": "Nov",
+    "Dez": "Dec"
+}
+
+# Create calendar events from loaded data
+for event in events:
+    date_parts = event['Date'].split(' - ')
+    print("Date parts:", date_parts)  # Debugging
+    start_time_str = date_parts[0]
+    print("Start time string:", start_time_str)  # Debugging
+    try:
+        # Convert German month abbreviation to English
+        for german_month, english_month in month_abbreviations.items():
+            start_time_str = start_time_str.replace(german_month, english_month)
+        start_time = datetime.strptime(start_time_str, "%d %b %H:%M")
+        print("Start time:", start_time)  # Debugging
+    except ValueError as e:
+        print("Error parsing start time string:", e)
+        continue
+
+    # Handle February 29th for leap years
+    if start_time.month == 2 and start_time.day == 29:
+        # Check if the current year is a leap year
+        if calendar.isleap(start_time.year):
+            print("Leap year: Adding February 29th event")
+        else:
+            print("Non-leap year: Skipping February 29th event")
+            continue
+
+    end_time_str = date_parts[1]
+
+    # Concatenate end time with the date part from start time
+    end_time = datetime.strptime(start_time.strftime("%Y-%m-%d ") + end_time_str, "%Y-%m-%d %H:%M")
+    print("End time:", end_time)  # Debugging
+
+    event_data = {
+        'name': event['Title'],
+        'start': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'stop': end_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'description': event['Link'],
+        'location': event['Link'],
+    }
+    try:
+        event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
+        print("New event created with ID:", event_id)
+    except Exception as e:
+        print("Error creating event:", e)
