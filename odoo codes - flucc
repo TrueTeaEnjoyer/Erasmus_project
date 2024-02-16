@@ -2,6 +2,23 @@ import json
 import xmlrpc.client
 import ssl
 from datetime import datetime
+import re
+
+# Define numeric_to_english_months dictionary
+numeric_to_english_months = {
+    'Jan': 'January',
+    'Feb': 'February',
+    'Mär': 'March',
+    'Apr': 'April',
+    'Mai': 'May',
+    'Jun': 'June',
+    'Jul': 'July',
+    'Aug': 'August',
+    'Sep': 'September',
+    'Okt': 'October',
+    'Nov': 'November',
+    'Dez': 'December'
+}
 
 # Suppress SSL verification warnings
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -21,62 +38,63 @@ models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(url), verbose=Fal
 with open('events.json', 'r', encoding='utf-8') as file:
     data = json.load(file)
 
-# Map of numeric month representations to English month names
-numeric_to_english_months = {
-    '01': 'January',
-    '02': 'February',
-    '03': 'March',
-    '04': 'April',
-    '05': 'May',
-    '06': 'June',
-    '07': 'July',
-    '08': 'August',
-    '09': 'September',
-    '10': 'October',
-    '11': 'November',
-    '12': 'December'
-}
+# Regular expression pattern to match date and time strings
+pattern = re.compile(r'\w+, (\d{2})\. (\w+) (\d{4}) (\d{2}:\d{2})(?:—(\d{2}:\d{2}))?')
 
 # Create calendar events from loaded data
 for event in data:
     try:
-        # Extract date information
-        date_str = event['Date'].split(', ')[1]  # Remove everything before comma
-        print("Date string:", date_str)  # Debug print statement
-        date_parts = date_str.split('.')
-        day = date_parts[0]
-        month = numeric_to_english_months[date_parts[1]]
-        year = '20' + date_parts[2]  # Assuming all years in the data are in the 21st century
-        date = '{} {} {}'.format(month, day, year)
-        print("Formatted date:", date)  # Debug print statement
+        # Extract date and time information using regular expressions
+        match = pattern.match(event['Date'])
+        if match:
+            day, month, year, start_time, end_time = match.groups()
+            print("Parsed Date String:", day, month, year)  # Debug print statement
+            print("Parsed Time String:", start_time, end_time)  # Debug print statement
 
-        # Extract time information if available
-        if 'Time' in event:
-            time = event['Time']
-            print("Time:", time)  # Debug print statement
-            # Extract start and end times
-            start_time, end_time = time.split('—')
-            # Remove unnecessary characters from end_time
-            end_time = end_time.split('\\')[0]
+            # Map abbreviated month to full month name
+            month = month.capitalize()
+
+            # Map German month names to English month names
+            if month in ['Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']:
+                month = numeric_to_english_months[month]
+
+            # Construct date string
+            date_str = "{} {}, {}".format(day, month, year)  # Remove the comma after {}
+            date_str = re.sub(r'(?<=\d)(st|nd|rd|th)\b', '', date_str)  # Remove ordinal suffix from day
+            date_str = date_str.replace(',', '')  # Remove comma after day of the week
+            print("Constructed Date String:", date_str)  # Debug print statement
+
+            # Parse the date and time strings
+            date_time = datetime.strptime(date_str, "%d %B %Y")  # Remove the comma after %a
+            start_time = date_time.strftime("%Y-%m-%d") + ' ' + start_time
+
+            # Handling end time
+            if end_time:
+                end_time = date_time.strftime("%Y-%m-%d") + ' ' + end_time
+            else:
+                end_time = start_time
+
+            # Check if the event already exists
+            event_exists = models.execute_kw(
+                db, uid, password,
+                'calendar.event', 'search_count',
+                [[['name', '=', event['Event']], ['start', '=', start_time]]]
+            )
+
+            # Create the event only if it doesn't already exist
+            if not event_exists:
+                event_data = {
+                    'name': event['Event'],
+                    'start': start_time,
+                    'stop': end_time,
+                    'description': event['Link'],
+                    'location': event['Link'],
+                }
+                event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
+                print("New event created with ID:", event_id)
+            else:
+                print("Event already exists:", event['Event'])
         else:
-            start_time = end_time = '00:00'
-
-        # Parse the date with year
-        start_datetime = datetime.strptime(date, "%B %d %Y")
-
-        # Combine date and time to create datetime objects
-        start_datetime = datetime.combine(start_datetime.date(), datetime.strptime(start_time, "%H:%M").time())
-        end_datetime = datetime.combine(start_datetime.date(), datetime.strptime(end_time, "%H:%M").time())
-
-        # Create the event with start and end times
-        event_data = {
-            'name': event['Title'],
-            'start': start_datetime.strftime('%Y-%m-%d %H:%M:%S'),
-            'stop': end_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Use stop instead of end for XML-RPC
-            'description': event['Link'],  # Using the link as the description
-            'location': event['Link'],  # Using the link as the location as well
-        }
-        event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
-        print("New event created with ID:", event_id)
+            print("Failed to parse date and time:", event['Date'])
     except Exception as e:
         print("An error occurred:", str(e))
