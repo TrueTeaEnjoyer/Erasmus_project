@@ -66,13 +66,24 @@ for event in events:
     else:  # If end time is not provided, add 3 hours to start time
         end_datetime = start_datetime + timedelta(hours=3)
 
-    # Create the event with start and end times
-    event_data = {
-        'name': event['Title'],
-        'start': start_datetime.strftime('%Y-%m-%d %H:%M:%S'),
-        'stop': end_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Use stop instead of end for XML-RPC
-        'description': event['Link'],  # Using the link as the description
-        'location': event['Link'],  # Using the link as the location as well
-    }
-    event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
-    print("New event created with ID:", event_id)
+    # Check if a similar event already exists
+    existing_event_ids = models.execute_kw(db, uid, password, 'calendar.event', 'search', [[
+        ('start', '=', start_datetime.strftime('%Y-%m-%d %H:%M:%S')),
+        ('stop', '=', end_datetime.strftime('%Y-%m-%d %H:%M:%S')),
+        ('name', '=', event['Title']),
+        ('description', '=', event['Link'])
+    ]])
+
+    if not existing_event_ids:  # If no similar event exists, create a new one
+        # Create the event with start and end times
+        event_data = {
+            'name': event['Title'],
+            'start': start_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+            'stop': end_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Use stop instead of end for XML-RPC
+            'description': event['Link'],  # Using the link as the description
+            'location': event['Link'],  # Using the link as the location as well
+        }
+        event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
+        print("New event created with ID:", event_id)
+    else:
+        print("Event already exists with similar attributes, skipping creation.")
