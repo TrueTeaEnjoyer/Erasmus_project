@@ -1,7 +1,7 @@
 import json
 import xmlrpc.client
 import ssl
-from datetime import datetime, timedelta, time  # Importing time
+from datetime import datetime, timedelta, time
 
 url = "http://148.251.132.24:8069"
 db = "student"
@@ -77,12 +77,19 @@ for event in events:
         else:
             end_datetime = datetime.combine(start_datetime.date(), time(end_hour, 0))
 
-        # Create the event with start and end times
-        event_data = {
-            'name': title,
-            'start': start_datetime.strftime('%Y-%m-%d %H:%M:%S'),
-            'stop': end_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Use stop instead of end for XML-RPC
-            'description': link,  # Using the link as the description
-            'location': link,  # Using the link as the location as well
-        }
-        event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
+        # Check if event already exists
+        existing_event_ids = models.execute_kw(db, uid, password, 'calendar.event', 'search', [[
+            ('name', '=', title),
+            ('start', '=', start_datetime.strftime('%Y-%m-%d %H:%M:%S')),
+            ('stop', '=', end_datetime.strftime('%Y-%m-%d %H:%M:%S'))
+        ]])
+        if not existing_event_ids:
+            # Create the event with start and end times
+            event_data = {
+                'name': title,
+                'start': start_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+                'stop': end_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Use stop instead of end for XML-RPC
+                'description': link,  # Using the link as the description
+                'location': link,  # Using the link as the location as well
+            }
+            event_id = models.execute_kw(db, uid, password, 'calendar.event', 'create', [event_data])
